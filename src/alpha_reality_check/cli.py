@@ -31,6 +31,7 @@ FAIL_THRESHOLD = {"never": 99, "watch": 1, "pause": 2, "reject": 3}
 def _finish(result: dict[str, Any], fail_on: FailOn) -> None:
     typer.echo(
         f"Decision: {result['decision']} | "
+        f"Decision scope: {result['decision_scope']} | "
         f"Trades: {result['metrics']['trade_count']} | "
         f"Expectancy: {result['metrics']['expectancy']:.6g}"
     )
@@ -188,13 +189,23 @@ def schema() -> None:
             ],
         },
         "decisions": ["CONTINUE", "WATCH", "PAUSE", "REJECT"],
+        "decision_scope": {
+            "without_stage": "overall",
+            "stage_priority": ["live", "paper", "backtest"],
+            "metrics": "metrics used by the top-level decision",
+            "overall_metrics": "metrics for all input trades",
+        },
         "output_required_keys": [
             "schema_version",
             "tool_version",
+            "decision_scope",
             "decision",
             "reason_codes",
             "warnings",
             "metrics",
+            "overall_metrics",
+            "stage_metrics",
+            "regime_metrics",
             "stage_comparison",
             "gate_results",
             "input_summary",

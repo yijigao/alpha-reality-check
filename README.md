@@ -57,11 +57,13 @@ alpha-rc --version
 Example terminal summary:
 
 ```text
-Decision: CONTINUE | Trades: 80 | Expectancy: 0.669388
+Decision: CONTINUE | Decision scope: overall | Trades: 80 | Expectancy: 0.669388
 ```
 
-Machine-readable JSON includes metrics, stage comparisons, every evaluated
-gate, explicit warnings, and input metadata without absolute local paths.
+Machine-readable JSON separates decision-scope `metrics` from
+`overall_metrics`, `stage_metrics`, and `regime_metrics`. It also includes
+stage comparisons, every evaluated gate, explicit warnings, and input metadata
+without absolute local paths.
 
 ## Decisions
 
@@ -83,6 +85,12 @@ When `stage` is available, the audit computes metrics by stage and reports
 target-minus-source gaps for expectancy, profit factor, win rate, and absolute
 drawdown. The preferred comparisons are backtest → paper, paper → live, and
 backtest → live. Missing stages remain `not_available`.
+
+The top-level decision always uses the highest evidence stage present in the
+fixed order `live > paper > backtest`. Its `decision_scope`, `metrics`, reason
+codes, and gates are based only on that stage; lower stages never supplement
+its sample count. Without a valid stage, the scope is `overall`. The `audit`
+and `compare` commands share this behavior.
 
 ```bash
 alpha-rc compare \

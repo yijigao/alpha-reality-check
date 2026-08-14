@@ -1,7 +1,7 @@
 from typing import Any
 
 from alpha_reality_check.decision import decide
-from alpha_reality_check.policy import load_policy
+from alpha_reality_check.policy import load_policy, parse_policy
 
 
 def metrics(**updates: Any) -> dict[str, Any]:
@@ -70,3 +70,47 @@ def test_missing_symbol_gate_is_skipped() -> None:
         if gate["code"] == "CONTINUE_SYMBOL_CONCENTRATION_ACCEPTABLE"
     )
     assert symbol_gate["available"] is False
+
+
+def test_unavailable_bootstrap_blocks_continue() -> None:
+    policy = parse_policy(
+        {
+            "sample": {"minimum_continue_trades": 20},
+            "bootstrap": {"minimum_trades": 50},
+        }
+    )
+    decision, reasons, gates = decide(
+        metrics(
+            trade_count=30,
+            bootstrap_probability_expectancy_positive=None,
+        ),
+        policy,
+    )
+    assert decision == "WATCH"
+    assert reasons == ["REFERENCE_CONTINUE_POLICY_NOT_FULLY_SATISFIED"]
+    bootstrap_gate = next(
+        gate for gate in gates if gate["code"] == "CONTINUE_BOOTSTRAP_PROBABILITY_MET"
+    )
+    assert bootstrap_gate["available"] is False
+    assert bootstrap_gate["triggered"] is False
+    assert "Required evidence" in bootstrap_gate["detail"]
+
+
+def test_disabled_boolean_gates_do_not_claim_success() -> None:
+    policy = parse_policy(
+        {
+            "continue": {
+                "require_positive_expectancy": False,
+                "require_non_negative_recent_expectancy": False,
+            }
+        }
+    )
+    _, _, gates = decide(metrics(expectancy=-1.0, recent_expectancy=-1.0), policy)
+    for code in (
+        "CONTINUE_EXPECTANCY_POSITIVE",
+        "CONTINUE_RECENT_EXPECTANCY_NON_NEGATIVE",
+    ):
+        gate = next(item for item in gates if item["code"] == code)
+        assert gate["available"] is False
+        assert gate["triggered"] is False
+        assert "Disabled by policy" in gate["detail"]

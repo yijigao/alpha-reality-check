@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import math
 from pathlib import Path
 from typing import Any, cast
 
@@ -73,7 +74,10 @@ def _integer(value: Any, location: str, minimum: int = 1) -> int:
 def _number(value: Any, location: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise AuditError(f"INVALID_NUMBER: {location}")
-    return float(value)
+    number = float(value)
+    if not math.isfinite(number):
+        raise AuditError(f"INVALID_NUMBER: {location} must be finite")
+    return number
 
 
 def _probability(value: Any, location: str) -> float:
@@ -97,6 +101,8 @@ def parse_policy(raw: dict[str, Any]) -> PolicyConfig:
         isinstance(value, str) and value.strip() for value in columns_raw.values()
     ):
         raise AuditError("COLUMN_NAMES_MUST_BE_NON_EMPTY_STRINGS")
+    if len(set(columns_raw.values())) != len(columns_raw):
+        raise AuditError("COLUMN_MAPPING_VALUES_MUST_BE_UNIQUE")
     columns = ColumnMap(**cast(dict[str, str], columns_raw))
 
     bootstrap = cast(dict[str, Any], merged["bootstrap"])
@@ -109,7 +115,7 @@ def parse_policy(raw: dict[str, Any]) -> PolicyConfig:
     if recent_fraction == 0.0:
         raise AuditError("INVALID_PROBABILITY: recent.fraction must be > 0")
 
-    return PolicyConfig(
+    policy = PolicyConfig(
         columns=columns,
         bootstrap_resamples=_integer(bootstrap["resamples"], "bootstrap.resamples"),
         bootstrap_seed=_integer(bootstrap["seed"], "bootstrap.seed", minimum=0),
@@ -185,6 +191,16 @@ def parse_policy(raw: dict[str, Any]) -> PolicyConfig:
             minimum=2,
         ),
     )
+    if policy.minimum_watch_trades > policy.minimum_continue_trades:
+        raise AuditError(
+            "INVALID_SAMPLE_THRESHOLDS: sample.minimum_watch_trades must be <= "
+            "sample.minimum_continue_trades"
+        )
+    if policy.reject_minimum_negative_conditions > 3:
+        raise AuditError(
+            "INVALID_REJECT_THRESHOLD: reject.minimum_negative_conditions must be <= 3"
+        )
+    return policy
 
 
 def load_policy(path: Path | None = None) -> PolicyConfig:

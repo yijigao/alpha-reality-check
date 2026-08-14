@@ -34,6 +34,8 @@ def markdown_text(result: dict[str, Any]) -> str:
     lines = [
         f"# Decision: {result['decision']}",
         "",
+        f"**Decision scope:** {result['decision_scope']}",
+        "",
         f"**Evidence reviewed:** {metrics['trade_count']} trades.",
         "",
         "## Why",

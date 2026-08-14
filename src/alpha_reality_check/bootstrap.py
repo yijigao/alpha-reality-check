@@ -5,6 +5,17 @@ from __future__ import annotations
 import numpy as np
 import numpy.typing as npt
 
+MAX_BOOTSTRAP_INDEX_CELLS = 1_000_000
+
+
+def bootstrap_chunk_size(trade_count: int, resamples: int) -> int:
+    """Return a bounded resample batch size for an index matrix."""
+    if trade_count < 1:
+        raise ValueError("trade_count must be positive")
+    if resamples < 1:
+        raise ValueError("resamples must be positive")
+    return max(1, min(resamples, MAX_BOOTSTRAP_INDEX_CELLS // trade_count))
+
 
 def probability_expectancy_positive(
     pnl: npt.ArrayLike, *, resamples: int, seed: int
@@ -17,7 +28,7 @@ def probability_expectancy_positive(
         raise ValueError("resamples must be positive")
     rng = np.random.default_rng(seed)
     positive = 0
-    chunk_size = min(resamples, 500)
+    chunk_size = bootstrap_chunk_size(values.size, resamples)
     completed = 0
     while completed < resamples:
         current = min(chunk_size, resamples - completed)

@@ -16,7 +16,17 @@ def test_version_schema_and_demo() -> None:
     assert version.stdout.strip() == "0.1.0"
     schema = runner.invoke(app, ["schema"])
     assert schema.exit_code == 0
-    assert json.loads(schema.stdout)["schema_version"] == "0.1.0"
+    schema_payload = json.loads(schema.stdout)
+    assert schema_payload["schema_version"] == "0.1.0"
+    assert "decision_scope" in schema_payload["output_required_keys"]
+    assert "overall_metrics" in schema_payload["output_required_keys"]
+    assert "stage_metrics" in schema_payload["output_required_keys"]
+    assert "regime_metrics" in schema_payload["output_required_keys"]
+    assert schema_payload["decision_scope"]["stage_priority"] == [
+        "live",
+        "paper",
+        "backtest",
+    ]
     demo = runner.invoke(app, ["demo"])
     assert demo.exit_code == 0
     assert "# Decision: CONTINUE" in demo.stdout
@@ -100,6 +110,9 @@ def test_compare_and_validate_config(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.stdout
     comparison = json.loads(output.read_text())["stage_comparison"]
     assert comparison["backtest_to_paper"] != "not_available"
+    compare_payload = json.loads(output.read_text())
+    assert compare_payload["decision_scope"] == "live"
+    assert compare_payload["metrics"] == compare_payload["stage_metrics"]["live"]
     valid = runner.invoke(
         app, ["validate-config", str(ROOT / "policies/reference.yaml")]
     )
@@ -109,6 +122,21 @@ def test_compare_and_validate_config(tmp_path: Path) -> None:
     invalid.write_text("unknown: true\n")
     failed = runner.invoke(app, ["validate-config", str(invalid)])
     assert failed.exit_code == 2
+
+    duplicate = tmp_path / "duplicate.yaml"
+    duplicate.write_text(
+        "columns:\n  exit_time: timestamp\n  pnl: timestamp\n",
+        encoding="utf-8",
+    )
+    duplicate_result = runner.invoke(app, ["validate-config", str(duplicate)])
+    assert duplicate_result.exit_code == 2
+    assert "COLUMN_MAPPING_VALUES_MUST_BE_UNIQUE" in duplicate_result.stderr
+
+    non_finite = tmp_path / "non-finite.yaml"
+    non_finite.write_text("pause:\n  recent_expectancy_below: .inf\n", encoding="utf-8")
+    non_finite_result = runner.invoke(app, ["validate-config", str(non_finite)])
+    assert non_finite_result.exit_code == 2
+    assert "pause.recent_expectancy_below" in non_finite_result.stderr
 
 
 def test_combined_stage_example_shows_decline(tmp_path: Path) -> None:
@@ -124,10 +152,13 @@ def test_combined_stage_example_shows_decline(tmp_path: Path) -> None:
     )
     assert result.exit_code == 0
     payload = json.loads(output.read_text())
-    stages = payload["metrics"]["stage_metrics"]
+    stages = payload["stage_metrics"]
     assert stages["backtest"]["expectancy"] > stages["paper"]["expectancy"]
     assert stages["paper"]["expectancy"] > stages["live"]["expectancy"]
     assert payload["stage_comparison"]["backtest_to_live"]["expectancy_gap"] < 0
+    assert payload["decision_scope"] == "live"
+    assert payload["metrics"] == stages["live"]
+    assert "Decision scope: live" in result.stdout
 
 
 def test_invalid_cli_inputs() -> None:

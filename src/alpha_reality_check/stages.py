@@ -14,6 +14,7 @@ STAGE_PAIRS = (
     ("paper", "live"),
     ("backtest", "live"),
 )
+STAGE_SEED_OFFSETS = {"backtest": 1009, "paper": 2018, "live": 3027}
 
 
 def grouped_metrics(
@@ -29,8 +30,13 @@ def grouped_metrics(
     for index, value in enumerate(values, start=1):
         subset = frame.loc[frame[column] == value].reset_index(drop=True)
         local_warnings: list[str] = []
+        seed_offset = (
+            STAGE_SEED_OFFSETS.get(value, index * 1009)
+            if column == "stage"
+            else index * 1009
+        )
         output[value] = calculate_metrics(
-            subset, config, local_warnings, seed_offset=index * 1009
+            subset, config, local_warnings, seed_offset=seed_offset
         )
         if local_warnings:
             warnings.extend(

@@ -27,6 +27,31 @@ def test_defaults_and_partial_override(tmp_path: Path) -> None:
         ({"continue": {"require_positive_expectancy": 1}}, "INVALID_BOOLEAN"),
         ({"continue": {"minimum_profit_factor": "high"}}, "INVALID_NUMBER"),
         ({"columns": {"pnl": ""}}, "COLUMN_NAMES"),
+        (
+            {"columns": {"exit_time": "timestamp", "pnl": "timestamp"}},
+            "COLUMN_MAPPING_VALUES_MUST_BE_UNIQUE",
+        ),
+        (
+            {"continue": {"minimum_profit_factor": float("nan")}},
+            "continue.minimum_profit_factor must be finite",
+        ),
+        (
+            {"pause": {"recent_expectancy_below": float("inf")}},
+            "pause.recent_expectancy_below must be finite",
+        ),
+        (
+            {
+                "sample": {
+                    "minimum_watch_trades": 51,
+                    "minimum_continue_trades": 50,
+                }
+            },
+            "INVALID_SAMPLE_THRESHOLDS",
+        ),
+        (
+            {"reject": {"minimum_negative_conditions": 4}},
+            "INVALID_REJECT_THRESHOLD",
+        ),
         ({"reject": {"minimum_negative_conditions": 1}}, "INVALID_INTEGER"),
     ],
 )

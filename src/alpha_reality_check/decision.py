@@ -182,71 +182,98 @@ def decide(
     gates.extend(pause_conditions)
     pause_triggered = any(gate.triggered for gate in pause_conditions)
 
+    profit_factor_gate = _gate(
+        "CONTINUE_PROFIT_FACTOR_MET",
+        "continue",
+        metrics["profit_factor"],
+        ">=",
+        config.continue_minimum_profit_factor,
+        pf is not None and pf >= config.continue_minimum_profit_factor,
+        available=pf is not None,
+    )
+    bootstrap_gate = _gate(
+        "CONTINUE_BOOTSTRAP_PROBABILITY_MET",
+        "continue",
+        bootstrap,
+        ">=",
+        config.continue_minimum_bootstrap_probability_positive,
+        bootstrap is not None
+        and float(bootstrap) >= config.continue_minimum_bootstrap_probability_positive,
+        available=bootstrap is not None,
+        detail=("Required evidence is unavailable." if bootstrap is None else ""),
+    )
+    expectancy_gate = _gate(
+        "CONTINUE_EXPECTANCY_POSITIVE",
+        "continue",
+        metrics["expectancy"],
+        ">",
+        0.0,
+        config.continue_require_positive_expectancy
+        and float(metrics["expectancy"]) > 0.0,
+        available=config.continue_require_positive_expectancy,
+        detail=(
+            "Disabled by policy: continue.require_positive_expectancy=false."
+            if not config.continue_require_positive_expectancy
+            else ""
+        ),
+    )
+    recent_expectancy_gate = _gate(
+        "CONTINUE_RECENT_EXPECTANCY_NON_NEGATIVE",
+        "continue",
+        metrics["recent_expectancy"],
+        ">=",
+        0.0,
+        config.continue_require_non_negative_recent_expectancy
+        and float(metrics["recent_expectancy"]) >= 0.0,
+        available=config.continue_require_non_negative_recent_expectancy,
+        detail=(
+            "Disabled by policy: continue.require_non_negative_recent_expectancy=false."
+            if not config.continue_require_non_negative_recent_expectancy
+            else ""
+        ),
+    )
+    winner_concentration_gate = _gate(
+        "CONTINUE_TOP_WINNER_CONCENTRATION_ACCEPTABLE",
+        "continue",
+        metrics["top_5_winner_contribution_ratio"],
+        "<=",
+        config.continue_maximum_top_5_winner_contribution_ratio,
+        float(metrics["top_5_winner_contribution_ratio"])
+        <= config.continue_maximum_top_5_winner_contribution_ratio,
+    )
+    symbol_concentration_gate = _gate(
+        "CONTINUE_SYMBOL_CONCENTRATION_ACCEPTABLE",
+        "continue",
+        symbol_share,
+        "<=",
+        config.continue_maximum_largest_symbol_profit_share,
+        symbol_share is not None
+        and float(symbol_share) <= config.continue_maximum_largest_symbol_profit_share,
+        available=symbol_share is not None,
+        detail="Skipped when symbol is not provided.",
+    )
     continue_conditions = [
-        _gate(
-            "CONTINUE_PROFIT_FACTOR_MET",
-            "continue",
-            metrics["profit_factor"],
-            ">=",
-            config.continue_minimum_profit_factor,
-            pf is not None and pf >= config.continue_minimum_profit_factor,
-            available=pf is not None,
-        ),
-        _gate(
-            "CONTINUE_BOOTSTRAP_PROBABILITY_MET",
-            "continue",
-            bootstrap,
-            ">=",
-            config.continue_minimum_bootstrap_probability_positive,
-            bootstrap is not None
-            and float(bootstrap)
-            >= config.continue_minimum_bootstrap_probability_positive,
-            available=bootstrap is not None,
-        ),
-        _gate(
-            "CONTINUE_EXPECTANCY_POSITIVE",
-            "continue",
-            metrics["expectancy"],
-            ">",
-            0.0,
-            (not config.continue_require_positive_expectancy)
-            or float(metrics["expectancy"]) > 0.0,
-        ),
-        _gate(
-            "CONTINUE_RECENT_EXPECTANCY_NON_NEGATIVE",
-            "continue",
-            metrics["recent_expectancy"],
-            ">=",
-            0.0,
-            (not config.continue_require_non_negative_recent_expectancy)
-            or float(metrics["recent_expectancy"]) >= 0.0,
-        ),
-        _gate(
-            "CONTINUE_TOP_WINNER_CONCENTRATION_ACCEPTABLE",
-            "continue",
-            metrics["top_5_winner_contribution_ratio"],
-            "<=",
-            config.continue_maximum_top_5_winner_contribution_ratio,
-            float(metrics["top_5_winner_contribution_ratio"])
-            <= config.continue_maximum_top_5_winner_contribution_ratio,
-        ),
-        _gate(
-            "CONTINUE_SYMBOL_CONCENTRATION_ACCEPTABLE",
-            "continue",
-            symbol_share,
-            "<=",
-            config.continue_maximum_largest_symbol_profit_share,
-            symbol_share is not None
-            and float(symbol_share)
-            <= config.continue_maximum_largest_symbol_profit_share,
-            available=symbol_share is not None,
-            detail="Skipped when symbol is not provided.",
-        ),
+        profit_factor_gate,
+        bootstrap_gate,
+        expectancy_gate,
+        recent_expectancy_gate,
+        winner_concentration_gate,
+        symbol_concentration_gate,
     ]
     gates.extend(continue_conditions)
-    applicable_continue = [gate for gate in continue_conditions if gate.available]
+    required_continue = [
+        profit_factor_gate,
+        bootstrap_gate,
+        winner_concentration_gate,
+    ]
+    if config.continue_require_positive_expectancy:
+        required_continue.append(expectancy_gate)
+    if config.continue_require_non_negative_recent_expectancy:
+        required_continue.append(recent_expectancy_gate)
+    if symbol_concentration_gate.available:
+        required_continue.append(symbol_concentration_gate)
     continue_triggered = sample_continue and all(
-        gate.triggered for gate in applicable_continue
+        gate.triggered for gate in required_continue
     )
 
     if reject_triggered:

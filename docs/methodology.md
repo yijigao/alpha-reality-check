@@ -26,6 +26,10 @@ is the fraction of resampled mean PnLs strictly above zero. It is not reported
 below the configured 20-trade floor. Determinism supports review; it does not
 remove model risk or establish statistical significance.
 
+Resampling is batched so the temporary index matrix targets at most 1,000,000
+cells (except when one unavoidable resample already exceeds that count). The
+batch size changes memory use, not the configured number of resamples.
+
 ## Decay
 
 The recent window is the last `max(20, ceil(30% × N))` trades, capped at N.
@@ -48,6 +52,13 @@ largest_symbol_profit_share = largest symbol positive-PnL sum / gross profit
 Losses are not netted against winners in these concentration denominators.
 
 ## Stage gaps
+
+When at least one valid stage is present, the top-level decision scope is the
+highest evidence stage in the fixed order `live > paper > backtest`. Decision
+metrics, reasons, and gates use only that stage. Lower stages cannot supplement
+its sample size. Without a valid stage the scope is `overall`. `overall_metrics`
+always describes all rows, while `stage_metrics` and `regime_metrics` remain
+separate diagnostic mappings.
 
 For backtest → paper, paper → live, and backtest → live, every gap is
 `target - source`. A positive drawdown gap means the target stage had a larger
