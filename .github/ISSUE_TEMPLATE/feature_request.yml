@@ -1,0 +1,18 @@
+name: Feature request
+description: Propose a focused evidence-audit capability.
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Evidence problem
+      description: What review problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Proposed scope and limitations
+    validations:
+      required: true

@@ -1,0 +1,38 @@
+columns:
+  exit_time: exit_time
+  pnl: pnl
+  symbol: symbol
+  stage: stage
+  fees: fees
+  slippage: slippage
+  regime: regime
+  side: side
+  strategy_id: strategy_id
+bootstrap:
+  resamples: 2000
+  seed: 1729
+  minimum_trades: 20
+recent:
+  minimum_trades: 20
+  fraction: 0.30
+sample:
+  minimum_watch_trades: 20
+  minimum_continue_trades: 50
+continue:
+  minimum_profit_factor: 1.25
+  minimum_bootstrap_probability_positive: 0.80
+  require_positive_expectancy: true
+  require_non_negative_recent_expectancy: true
+  maximum_top_5_winner_contribution_ratio: 0.60
+  maximum_largest_symbol_profit_share: 0.50
+pause:
+  recent_expectancy_below: 0
+  recent_decay_ratio_below: -0.50
+  top_5_winner_contribution_ratio_above: 0.75
+  largest_symbol_profit_share_above: 0.70
+reject:
+  minimum_trades: 50
+  expectancy_at_or_below: 0
+  profit_factor_below: 1.0
+  bootstrap_probability_positive_below: 0.30
+  minimum_negative_conditions: 2
