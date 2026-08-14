@@ -13,15 +13,8 @@ money.
 ## 30-second quick start
 
 ```bash
-git clone https://github.com/yijigao/alpha-reality-check.git
-cd alpha-reality-check
-python -m venv .venv
-. .venv/bin/activate
-pip install .
+pip install alpha-reality-check
 alpha-rc demo
-alpha-rc audit examples/healthy_strategy.csv \
-  --json artifacts/decision.json \
-  --markdown artifacts/report.md
 ```
 
 ## Input
