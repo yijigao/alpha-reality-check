@@ -10,6 +10,18 @@ The project is an early v0.1 MVP. Its deterministic reference policy is a
 review aid—not a statistical truth and not evidence that a strategy will make
 money.
 
+## Why Alpha Reality Check
+
+Most research tools focus on finding better historical returns. Alpha Reality
+Check asks a different question: is the reported edge still broad, recent, and
+consistent with the evidence stage that actually matters? It turns existing
+trade-level data into deterministic, reviewable diagnostics for decay,
+concentration, regime dependence, and backtest-to-live degradation—without
+generating signals or touching execution. The output is designed for
+researchers, systematic traders, and risk reviewers who need a reproducible
+`CONTINUE`, `WATCH`, `PAUSE`, or `REJECT` checkpoint before allocating more
+time or capital.
+
 ## 30-second quick start
 
 ```bash
